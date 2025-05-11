@@ -1,147 +1,111 @@
-# Insurance RAG Chatbot
+Insurance RAG Chatbot
 
-A Retrieval-Augmented Generation (RAG) chatbot for customer support, built with LangChain and Streamlit. It answers user questions based only on provided PDF documents (and optional external links), falling back to "I don't know" for out-of-scope queries.
+A Retrieval-Augmented Generation (RAG) chatbot for insurance customer support documentation. It ingests PDF files (and optionally external links found within them), builds a FAISS vector index of content chunks, and provides a Streamlit-based chat interface that answers questions strictly from the indexed sources—replying “I don’t know” for out-of-scope queries.
 
----
+📂 Repository Structure
 
-## 📂 Repository Structure
-
-```
-Alltius_Assignment_Rahul/
-├── ingest.py                # Ingests PDFs & external links, builds FAISS index
-├── app.py                   # Streamlit UI for the chatbot
-├── utils/
-│   ├── loader.py            # PDF loading & splitting helpers
-│   ├── vector_store.py      # FAISS creation & loading helpers
-│   ├── qa_chain.py          # RetrievalQA chain with LangSmith tracing
-│   └── external_loader.py   # URL extraction & fetching logic
-├── data/
-│   └── insurance_pdfs/      # Your source PDF files
-├── .env                     # API keys (ignored via .gitignore)
+Insurance_RAG_Bot/
+├── .gitignore               # ignore .env, .venv, index.faiss
+├── README.md                # Project documentation
 ├── requirements.txt         # Python dependencies
+├── .venv/                   # Python virtual environment (local)
+├── app.py                   # Streamlit UI
+├── ingest.py                # Ingest PDFs & external links, build index
+├── list_external.py         # CLI: list external URLs in the index
+├── test_retrieval.py        # CLI: interactive QA testing
+├── visualize_embeddings.py  # CLI: inspect embedding norms & lengths
+├── data/                    # Folder containing your PDF sources
+│   └── insurance_pdfs/
 ├── index.faiss/             # Persisted FAISS index (ignored)
-└── README.md                # This documentation
-```
+└── utils/
+    ├── loader.py            # PDF loading & splitting
+    ├── vector_store.py      # FAISS index creation & loading
+    ├── qa_chain.py          # RetrievalQA chain + LangSmith tracing
+    └── external_loader.py   # Extract & fetch external URLs
 
----
+🚀 Local Setup & Run
 
-## 🚀 Installation & Local Run
+Clone this repo:
 
-1. **Clone** the repo:
+git clone https://github.com/imrahulsrinivas/Insurance_RAG_Bot.git
+cd Insurance_RAG_Bot
 
-   ```bash
-   git clone https://github.com/imrahulsrinivas/Insurance_RAG_Bot.git
-   cd Insurance_RAG_Bot
-   ```
+Create & activate a virtual environment:
 
-2. **Create & activate** a Python virtual environment:
+python3 -m venv .venv
+source .venv/bin/activate
 
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
+Install dependencies:
 
-3. **Install** dependencies:
+pip install --upgrade pip
+pip install -r requirements.txt
 
-   ```bash
-   pip install --upgrade pip
-   pip install -r requirements.txt
-   ```
+Configure your API keys in a .env at project root:
 
-4. **Configure** environment variables in `.env`:
+OPENAI_API_KEY=sk-...
+LANGSMITH_API_KEY=ls-...
+LANGSMITH_TRACING=true
+LANGSMITH_PROJECT=Insurance_RAG_Bot
 
-   ```ini
-   OPENAI_API_KEY=sk-...
-   LANGSMITH_API_KEY=ls-...
-   LANGSMITH_TRACING=true
-   LANGSMITH_PROJECT=Insurance_RAG_Bot
-   ```
+Ingest your source documents:
 
-5. **Build** the vector index (PDFs + external links):
+python ingest.py
 
-   ```bash
-   python ingest.py
-   ```
+Loads all PDFs under data/insurance_pdfs/
 
-6. **Launch** the Streamlit app:
+Extracts external URLs inside PDF text, fetches and indexes them
 
-   ```bash
-   streamlit run app.py
-   ```
+Splits text into chunks, builds FAISS index at index.faiss/
 
-Visit `http://localhost:8501` in your browser.
+Launch the chatbot UI:
 
----
+streamlit run app.py
 
-## 🌐 Deployment to Streamlit Community Cloud
+Open the printed Local URL (e.g. http://localhost:8501) in your browser.
 
-1. **Push** your cleaned repo to GitHub (ensure `.env` is in `.gitignore`).
-2. On [https://streamlit.io/cloud](https://streamlit.io/cloud), click **New app** → select your GitHub repo & branch.
-3. In the **Secrets** tab on Streamlit, add your keys:
+🛠️ Helper Scripts
 
-   * `OPENAI_API_KEY`
-   * `LANGSMITH_API_KEY`
-   * `LANGSMITH_TRACING=true`
-   * `LANGSMITH_PROJECT=Insurance_RAG_Bot`
-4. Click **Deploy**. Your chatbot will be live at a `streamlit.app` URL.
+list_external.py: List all external URLs indexed.
 
----
+python list_external.py
 
-## 🔧 Test Cases
+test_retrieval.py: Interactive CLI to ask questions and view sources.
 
-Use the following to validate functionality:
-
-| Question                                    | Expected Behavior                          |
-| ------------------------------------------- | ------------------------------------------ |
-| "What is the deductible for the Gold plan?" | Answers based on PDF content               |
-| "How do I file a claim?"                    | Answers or 'I don't know' if not in source |
-| "What does HOMEPAGE link refer to?"         | External URL content used to answer        |
-| "Who is the current CEO of OpenAI?"         | "I don't know" (out-of-scope query)        |
-
-### Automated CLI Test
-
-Create `test_retrieval.py`:
-
-```python
-from langchain_openai import OpenAIEmbeddings
-from langchain_community.vectorstores.faiss import FAISS
-from utils.qa_chain import build_qa_chain
-import os
-
-# Load index
-o = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
-vs = FAISS.load_local("index.faiss", o, allow_dangerous_deserialization=True)
-qa = build_qa_chain(vs)
-
-# Sample prompts
-tests = [
-    ("What is the deductible for the Gold plan?", None),
-    ("Who is the CEO of OpenAI?", "I don't know"),
-]
-
-for q, expected in tests:
-    res = qa({"query": q})
-    print(f"Q: {q}")
-    print(f"A: {res['result']}")
-    if expected:
-        print("PASS" if expected in res['result'] else "FAIL")
-    print("---")
-```
-
-Run:
-
-```bash
 python test_retrieval.py
-```
 
----
+visualize_embeddings.py: Dump a table of embedding norms and chunk lengths.
 
-## 📈 Monitoring & Tracing with LangSmith
+python visualize_embeddings.py
 
-* Ensure `.env` has `LANGSMITH_TRACING=true`, `LANGSMITH_API_KEY`, and `LANGSMITH_PROJECT`.
-* PylChain `LangChainTracer` in `utils/qa_chain.py` will send both LLM calls and chain steps to LangSmith.
-* Interact with the Streamlit app; then view detailed run traces at [https://app.langsmith.com](https://app.langsmith.com) under your project.
+🌐 Deployment to Streamlit Community Cloud
 
----
+Push your clean main branch to GitHub (ensure .env is in .gitignore).
 
-*End of documentation.*
+On https://share.streamlit.io, click Create app.
+
+Repository: imrahulsrinivas/Insurance_RAG_Bot
+
+Branch: main
+
+App file path: app.py
+
+In the Secrets section of the app settings, add:
+
+OPENAI_API_KEY = "sk-..."
+LANGSMITH_API_KEY = "ls-..."
+LANGSMITH_TRACING = "true"
+LANGSMITH_PROJECT = "Insurance_RAG_Bot"
+
+Click Deploy. Your live app URL will be displayed once ready.
+
+📈 Monitoring & Tracing with LangSmith
+
+The QA chain and LLM calls are instrumented with LangChainTracer callbacks.
+
+Ensure LANGSMITH_TRACING=true in your environment.
+
+Visit https://app.langsmith.com and select project Insurance_RAG_Bot to view runs:
+
+Runs: each RetrievalQA invocation with inputs, retrieved chunks, and outputs.
+
+LLM Calls: raw prompts, completions, and token usage.
