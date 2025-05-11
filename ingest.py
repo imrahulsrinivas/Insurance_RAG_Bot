@@ -2,10 +2,12 @@ from dotenv import load_dotenv
 import os
 from pathlib import Path
 
-from langchain_community.document_loaders import PyPDFLoader
+from langchain.document_loaders import PyPDFLoader
+
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
-from langchain_community.vectorstores import FAISS
+
+from langchain.vectorstores import FAISS
 
 # Load environment variables
 load_dotenv()
@@ -62,6 +64,30 @@ def main():
     print(f"Loaded {len(raw_docs)} pages.")
     split_docs = split_documents(raw_docs)
     print(f"Split into {len(split_docs)} chunks.")
+
+    # Extract & fetch external URLs
+    from utils.external_loader import load_external_documents_from_pdfs
+    external_docs = load_external_documents_from_pdfs(split_docs)
+    print(f"Found {len(external_docs)} external documents/URLs.")
+
+    # Load & split any external PDFs, or keep HTML/text docs
+    from langchain_community.document_loaders import PyPDFLoader
+    new_chunks = []
+    for doc in external_docs:
+        src = doc.metadata.get("source", "")
+        if src.lower().endswith(".pdf"):
+            loader = PyPDFLoader(src)
+            new_chunks.extend(loader.load_and_split())
+        else:
+            new_chunks.append(doc)
+
+    all_docs = split_docs + new_chunks
+    print(f"Total chunks (incl. external): {len(all_docs)}")
+
+    # Build & save the combined index
+    vector_store = build_faiss_index(all_docs)
+
+
 
     # Build and save index
     vector_store = build_faiss_index(split_docs)

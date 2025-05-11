@@ -1,0 +1,11 @@
+# Environment
+.env
+venv/
+.venv/
+
+# Build / cache
+__pycache__/
+index.faiss/
+
+# Editor
+.vscode/

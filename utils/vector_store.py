@@ -1,6 +1,7 @@
 import os
 from langchain_openai import OpenAIEmbeddings
-from langchain_community.vectorstores import FAISS
+from langchain.vectorstores import FAISS
+
 
 # Ensure API key is available
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

@@ -3,8 +3,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 import streamlit as st
-from langchain_community.chat_models import ChatOpenAI
-from langchain_community.vectorstores.faiss import FAISS
+from langchain.chat_models import ChatOpenAI
+from langchain.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
@@ -28,6 +28,8 @@ if not INDEX_DIR.exists():
     st.error("❌ FAISS index not found. Run `python ingest.py` first.")
     st.stop()
 
+
+
 @st.cache_resource(show_spinner=False)
 def load_vector_store(idx_path: str):
     embeddings = OpenAIEmbeddings(
@@ -37,8 +39,30 @@ def load_vector_store(idx_path: str):
     vs = FAISS.load_local(idx_path, embeddings, allow_dangerous_deserialization=True)
     return vs
 
+
 vector_store = load_vector_store(str(INDEX_DIR))
 qa_chain = build_qa_chain(vector_store)
+
+# List all indexed sources in the sidebar
+all_sources = [
+    doc.metadata.get("source", "")
+    for doc in vector_store.docstore._dict.values()
+]
+external_sources = [s for s in all_sources if s.startswith("http")]
+st.sidebar.header("🔗 External Documents")
+if external_sources:
+    for url in external_sources:
+        st.sidebar.write(url)
+else:
+    st.sidebar.write("No external URLs indexed.")
+
+
+# After vector_store = load_vector_store(...)
+all_sources = [doc.metadata.get("source", "") for doc in vector_store.docstore._dict.values()]
+external_sources = [s for s in all_sources if s.startswith("http")]
+st.sidebar.header("🔗 External Documents")
+st.sidebar.write(external_sources)
+
 
 # User input
 query = st.text_input("Ask a question about the insurance documents:")
