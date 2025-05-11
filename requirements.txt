@@ -1,4 +1,8 @@
 langchain
+langchain-community
+langchain-openai
+
+
 openai
 pypdf
 faiss-cpu
@@ -6,9 +10,7 @@ chromadb
 streamlit
 beautifulsoup4
 requests
-langsmith
-langchain-community
-langchain-openai
+
 faiss-cpu        # if you’re using FAISS locally
 requests
 beautifulsoup4
